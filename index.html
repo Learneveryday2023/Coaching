@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เพื่อนโค้ช | Coach Buddy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: #f8fafc;
+        }
+        /* Custom animation for reflection box */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        /* Custom animation for input shake */
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        .shake {
+            animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
+        }
+    </style>
+</head>
+<body class="text-gray-800 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl mx-auto">
+
+        <!-- Welcome Screen -->
+        <div id="welcome-screen" class="text-center p-8 bg-white rounded-2xl shadow-lg">
+            <h1 class="text-4xl md:text-5xl font-bold text-teal-600 mb-4">เพื่อนโค้ช</h1>
+            <p class="text-lg md:text-xl text-gray-600 mb-8">สวัสดีครับ :) ที่นี่คือพื้นที่ปลอดภัยสำหรับเธอ ที่จะพูดคุยกับเป้าหมายของตัวเองนะ</p>
+            <button id="start-button" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-10 rounded-full text-xl transition-transform transform hover:scale-105 shadow-md">
+                เริ่มต้นกันนะ
+            </button>
+        </div>
+
+        <!-- Coaching Screen -->
+        <div id="coaching-screen" class="hidden">
+            <div class="bg-white rounded-2xl shadow-lg p-6 md:p-10">
+                <!-- Progress Bar -->
+                <div class="mb-6">
+                    <div class="bg-gray-200 rounded-full h-2.5">
+                        <div id="progress-bar" class="bg-teal-500 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Step Content -->
+                <div id="step-content" class="mb-6">
+                    <h2 id="step-title" class="text-xl font-bold text-gray-500 mb-2"></h2>
+                    <p id="step-question" class="text-2xl md:text-3xl font-bold mb-4"></p>
+                </div>
+
+                <!-- User Input -->
+                <textarea id="user-input" rows="5" class="w-full p-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-teal-400 focus:border-teal-400 transition text-lg" placeholder="ค่อยๆ พิมพ์คำตอบได้เลยนะ..."></textarea>
+
+                <!-- Reflection Box -->
+                <div id="reflection-box" class="hidden mt-6 p-4 bg-teal-50 border-l-4 border-teal-400 rounded-lg">
+                    <p id="reflection-text" class="text-teal-800"></p>
+                </div>
+            </div>
+            
+            <!-- Action Button -->
+            <div class="mt-6 text-center">
+                <button id="next-button" class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-10 rounded-full text-xl transition-transform transform hover:scale-105 shadow-md">
+                    ต่อไป
+                </button>
+            </div>
+        </div>
+
+        <!-- Summary Screen -->
+        <div id="summary-screen" class="hidden bg-white rounded-2xl shadow-lg p-6 md:p-10">
+            <h1 class="text-4xl font-bold text-center text-teal-600 mb-2">ยอดเยี่ยมเลยครับ!</h1>
+            <p class="text-lg text-center text-gray-600 mb-8">นี่คือภาพสะท้อนความคิดของเธอ ที่จะนำทางไปสู่เป้าหมาย</p>
+            
+            <div id="summary-content" class="space-y-6">
+                <!-- Summary items will be injected here -->
+            </div>
+
+            <div class="text-center mt-10">
+                <p class="text-gray-700 font-bold text-xl mb-4">"เราขอเป็นกำลังใจให้ในทุกๆ ก้าวนะครับ :)"</p>
+                <button id="restart-button" class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-3 px-8 rounded-full text-lg transition-transform transform hover:scale-105 shadow-md">
+                    เริ่มต้นเป้าหมายใหม่
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- DATA & STATE ---
+        const steps = [
+            {
+                topic: "เป้าหมายของคุณ",
+                question: () => "เป้าหมายที่สำคัญที่สุดสำหรับเธอในตอนนี้ คืออะไรเหรอ? บอกเล่าให้เราฟังหน่อยนะ",
+                reflection: (answer) => `การตั้งเป้าหมายว่าจะ "${answer}" เป็นจุดเริ่มต้นที่ยอดเยี่ยมเลยนะ`
+            },
+            {
+                topic: "เหตุผลที่สำคัญ",
+                question: (prevAnswer) => `แล้วอะไรคือ 'เหตุผล' ที่ทำให้เธออยาก "${prevAnswer}" ให้สำเร็จล่ะ?`,
+                reflection: (answer) => `ขอบคุณที่แบ่งปันนะ เหตุผลที่ว่า "${answer}" นี่แหละ คือพลังงานสำคัญที่จะอยู่กับเราไปตลอดทางเลย`
+            },
+            {
+                topic: "ภาพของความสำเร็จ",
+                question: (prevAnswer) => `ลองจินตนาการตามนะ... ในวันที่เธอทำเป้าหมายสำเร็จแล้ว เธอรู้สึกอย่างไรกับ "${prevAnswer}" ที่ได้รับมา?`,
+                reflection: (answer) => `ความรู้สึก "${answer}" เป็นอะไรที่ดีมากๆ เลยนะ :) เก็บความรู้สึกนี้ไว้ในใจให้ดีนะครับ มันคือรางวัลที่แท้จริง`
+            },
+            {
+                topic: "ความท้าทาย (รอบที่ 1)",
+                question: (prevAnswer) => `ในการเดินทางไปสู่ความสำเร็จ มีความท้าทายอะไรบ้าง ที่เธอคิดว่าอาจจะได้เจอ?`,
+                reflection: (answer) => `ขอบคุณที่กล้ามองว่า "${answer}" เป็นความท้าทายนะ การที่เรามองเห็นมันก่อน ก็เหมือนกับเราเตรียมตัวรับมือไว้แล้ว`
+            },
+            {
+                topic: "ความท้าทาย (รอบที่ 2)",
+                question: (prevAnswer) => `ดีเลยครับ นอกจากเรื่อง "${prevAnswer}" แล้ว... มีความกังวลเล็กๆ หรือ 'ถ้า...' อะไรซ่อนอยู่ในใจอีกไหม?`,
+                reflection: (answer) => `การยอมรับความกังวลว่า "${answer}" คือความกล้าหาญมากเลยนะ การรู้ตัวช่วยให้เราจัดการมันได้ดีขึ้นครับ`
+            },
+            {
+                topic: "ความท้าทาย (รอบที่ 3)",
+                question: (prevAnswer) => `เยี่ยมเลย ครั้งสุดท้าย... ลองมองไปที่ 'คนอื่น' หรือ 'สภาพแวดล้อม' มีอะไรที่เป็นความท้าทายจากภายนอก ที่อาจส่งผลต่อ "${prevAnswer}" อีกบ้าง?`,
+                reflection: () => `ครบถ้วนเลยครับ ตอนนี้เราเห็นภาพความท้าทายทั้งจากภายในและภายนอกชัดเจนขึ้นมากแล้ว`
+            },
+            {
+                topic: "โอกาสและตัวช่วย (รอบที่ 1)",
+                question: () => `มามองหาเรื่องดีๆ กันบ้างนะ ตอนนี้ มีโอกาสหรือ 'ตัวช่วย' อะไรอยู่รอบๆ ตัวเราบ้าง?`,
+                reflection: (answer) => `ใช่แล้ว การมี "${answer}" เป็นตัวช่วยเป็นเรื่องที่ดีมากเลยนะ`
+            },
+            {
+                topic: "โอกาสและตัวช่วย (รอบที่ 2)",
+                question: (prevAnswer) => `ดีเลยครับ แล้วถ้ามองมาที่ 'ทักษะ' หรือ 'ความรู้' ในตัวเธอล่ะ มีอะไรที่เอามาใช้สนับสนุน "${prevAnswer}" ได้อีก?`,
+                reflection: (answer) => `เห็นไหมครับว่าในตัวเรามีทรัพยากรดีๆ อย่าง "${answer}" ซ่อนอยู่เยอะเลยนะ`
+            },
+            {
+                topic: "โอกาสและตัวช่วย (รอบที่ 3)",
+                question: (prevAnswer) => `ยอดเยี่ยม รอบสุดท้าย... ลองนึกถึงโอกาสที่เราอาจจะยังมองไม่เห็น หรือคนที่เรายังไม่เคยคุยด้วย ที่จะช่วยเรื่อง "${prevAnswer}" ได้ดูสิ มีอะไรอีกไหม?`,
+                reflection: () => `สุดยอดเลยครับ บางครั้งโอกาสที่ดีที่สุดก็มาในรูปแบบที่เราคาดไม่ถึง การเปิดใจมองหาสิ่งใหม่ๆ เป็นเรื่องที่ดีมาก`
+            },
+            {
+                topic: "ก้าวแรกของการเริ่มต้น",
+                question: () => `มาถึงขั้นตอนสุดท้ายแล้วนะ :) อะไรคือ 'ก้าวแรกที่เล็กที่สุด' ที่เธอจะเริ่มต้นทำได้เลย?`,
+                reflection: (answer) => `การเริ่มต้นด้วย "${answer}" ยอดเยี่ยมมากครับ! ก้าวแรกไม่จำเป็นต้องยิ่งใหญ่ แค่ได้เริ่มต้นก็ถือว่าสุดยอดแล้วนะ`
+            }
+        ];
+
+        let currentStep = 0;
+        let answers = [];
+        let isProcessing = false;
+
+        // --- DOM ELEMENTS ---
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const coachingScreen = document.getElementById('coaching-screen');
+        const summaryScreen = document.getElementById('summary-screen');
+        const startButton = document.getElementById('start-button');
+        const nextButton = document.getElementById('next-button');
+        const restartButton = document.getElementById('restart-button');
+        const progressBar = document.getElementById('progress-bar');
+        const stepTitle = document.getElementById('step-title');
+        const stepQuestion = document.getElementById('step-question');
+        const userInput = document.getElementById('user-input');
+        const reflectionBox = document.getElementById('reflection-box');
+        const reflectionText = document.getElementById('reflection-text');
+        const summaryContent = document.getElementById('summary-content');
+
+        // --- FUNCTIONS ---
+        function startCoaching() {
+            welcomeScreen.classList.add('hidden');
+            coachingScreen.classList.remove('hidden');
+            currentStep = 0;
+            answers = [];
+            isProcessing = false;
+            renderStep(currentStep);
+        }
+
+        function renderStep(stepIndex) {
+            const step = steps[stepIndex];
+            const prevAnswer = answers.length > 0 ? answers[answers.length - 1] : null;
+            
+            progressBar.style.width = `${((stepIndex + 1) / steps.length) * 100}%`;
+            stepTitle.textContent = `ขั้นตอนที่ ${stepIndex + 1}/${steps.length}: ${step.topic}`;
+            stepQuestion.textContent = step.question(prevAnswer);
+            userInput.value = '';
+            userInput.focus();
+            reflectionBox.classList.add('hidden');
+            nextButton.textContent = 'ต่อไป';
+            if (stepIndex === steps.length - 1) {
+                nextButton.textContent = 'ดูสรุปทั้งหมด';
+            }
+        }
+
+        function handleNextStep() {
+            if (isProcessing) return;
+
+            const answer = userInput.value.trim();
+            if (answer === '') {
+                userInput.classList.add('shake');
+                setTimeout(() => userInput.classList.remove('shake'), 820);
+                return;
+            }
+
+            isProcessing = true;
+            nextButton.disabled = true;
+            userInput.disabled = true;
+            answers.push(answer);
+            
+            const step = steps[currentStep];
+            reflectionText.textContent = step.reflection(answer);
+            reflectionBox.classList.remove('hidden');
+            reflectionBox.classList.add('fade-in');
+
+            setTimeout(() => {
+                currentStep++;
+                reflectionBox.classList.add('hidden');
+                reflectionBox.classList.remove('fade-in');
+
+                if (currentStep < steps.length) {
+                    renderStep(currentStep);
+                } else {
+                    showSummary();
+                }
+                isProcessing = false;
+                nextButton.disabled = false;
+                userInput.disabled = false;
+            }, 4000); 
+        }
+        
+        function showSummary() {
+            coachingScreen.classList.add('hidden');
+            summaryScreen.classList.remove('hidden');
+            summaryContent.innerHTML = ''; 
+
+            steps.forEach((step, index) => {
+                const summaryItem = document.createElement('div');
+                summaryItem.className = 'bg-gray-50 p-4 rounded-xl border';
+                summaryItem.innerHTML = `
+                    <p class="font-bold text-teal-700 mb-2">${step.topic}</p>
+                    <p class="text-gray-800 whitespace-pre-wrap">${answers[index]}</p>
+                `;
+                summaryContent.appendChild(summaryItem);
+            });
+        }
+
+        function restartCoaching() {
+            summaryScreen.classList.add('hidden');
+            welcomeScreen.classList.remove('hidden');
+        }
+
+        // --- EVENT LISTENERS ---
+        startButton.addEventListener('click', startCoaching);
+        nextButton.addEventListener('click', handleNextStep);
+        restartButton.addEventListener('click', restartCoaching);
+        userInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleNextStep();
+            }
+        });
+
+    </script>
+</body>
+</html>
